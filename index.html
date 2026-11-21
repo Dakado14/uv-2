@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Project: Rebellion</title>
+<link id="fav" rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--red:#f1f1f1;--gold:#ffffff;--bg:#030405;--panel:rgba(12,13,16,.92);--line:rgba(255,255,255,.18)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:#f1f5f9;min-height:100vh;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden}
+canvas#space{position:fixed;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
+.moon-orb{position:fixed;z-index:0;right:clamp(-90px,9vw,150px);top:clamp(70px,13vh,150px);width:clamp(190px,29vw,410px);aspect-ratio:1;border-radius:50%;pointer-events:none;opacity:.31;background-color:#c8cbd0;background-image:radial-gradient(ellipse at 26% 30%,rgba(55,58,64,.42) 0 4%,transparent 4.5%),radial-gradient(ellipse at 67% 24%,rgba(55,58,64,.28) 0 6%,transparent 6.5%),radial-gradient(ellipse at 58% 65%,rgba(45,48,54,.34) 0 9%,transparent 9.5%),radial-gradient(ellipse at 30% 72%,rgba(45,48,54,.25) 0 5%,transparent 5.5%),radial-gradient(ellipse at 77% 48%,rgba(255,255,255,.35) 0 3%,transparent 3.6%),linear-gradient(135deg,#f2f3f5 0%,#b9bdc4 48%,#707680 100%);box-shadow:inset -34px -22px 55px rgba(0,0,0,.64),inset 12px 12px 28px rgba(255,255,255,.38),0 0 100px rgba(255,255,255,.18);animation:moon-drift 26s ease-in-out infinite,moon-turn 170s linear infinite}
+.moon-orb::after{content:"";position:absolute;inset:0;border-radius:inherit;background:radial-gradient(circle at 30% 28%,transparent 0 42%,rgba(0,0,0,.08) 64%,rgba(0,0,0,.48) 100%)}
+
+#space-effects{position:fixed;inset:0;z-index:4;overflow:hidden;pointer-events:none}
+.meteor{position:absolute;width:155px;height:2px;border-radius:999px;background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.12) 45%,rgba(255,255,255,.98) 100%);box-shadow:0 0 7px 1px rgba(255,255,255,.68);opacity:0;transform:rotate(135deg);animation:meteor-cross 1.65s ease-in forwards}
+@keyframes meteor-cross{0%{opacity:0;transform:translate3d(0,0,0) rotate(135deg) scaleX(.25)}12%{opacity:1}78%{opacity:.88}100%{opacity:0;transform:translate3d(-62vw,62vh,0) rotate(135deg) scaleX(1.15)}}
+@media(prefers-reduced-motion:reduce){.meteor{animation:none!important}}
+@keyframes moon-drift{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(-18px,15px,0)}}
+@keyframes moon-turn{from{filter:brightness(.96);background-position:0 0}50%{filter:brightness(1.05);background-position:2px -3px}to{filter:brightness(.96);background-position:0 0}}
+.app-shell{position:relative;z-index:1;display:flex;width:100%;height:100vh;min-height:0}
+.sidebar{width:250px;flex:0 0 250px;height:100%;display:flex;flex-direction:column;padding:18px 13px;background:rgba(5,8,16,.94);border-right:1px solid rgba(255,255,255,.16);box-shadow:12px 0 35px rgba(0,0,0,.28);backdrop-filter:blur(18px);transition:width .28s ease,flex-basis .28s ease,padding .28s ease;overflow:hidden}
+.sidebar-brand{display:flex;align-items:center;gap:11px;padding:5px 7px 20px;white-space:nowrap}
+.brand-mark{width:38px;height:38px;flex:0 0 38px;filter:drop-shadow(0 0 9px rgba(255,255,255,.25))}
+.brand-name{font-family:Inter,system-ui,sans-serif;color:var(--red);font-size:10px;line-height:1.6;letter-spacing:.1px;text-shadow:0 2px 14px rgba(255,255,255,.12)}
+.brand-name span{color:var(--gold)}
+.sidebar-heading{height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 7px 8px;color:#8790a1;font-size:10px;font-weight:800;letter-spacing:1.8px;white-space:nowrap}
+.icon-button{border:0;background:transparent;color:#aab1bf;cursor:pointer;border-radius:7px;width:27px;height:27px;font-size:18px;transition:background .2s,color .2s,transform .2s}
+.icon-button:hover{background:rgba(255,255,255,.08);color:var(--gold)}
+#tabs{display:flex;flex-direction:column;gap:6px;overflow:auto;overflow-x:hidden;min-height:0;padding:2px 0 10px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.22) transparent}
+.tab-entry{display:flex;align-items:center;gap:2px;min-width:0;border:1px solid transparent;border-radius:10px;background:rgba(255,255,255,.025);opacity:1;transform:translateX(0);max-height:58px;transition:opacity .2s ease,transform .24s ease,max-height .24s ease,background .2s,border-color .2s;animation:tab-entry-in .22s ease both}
+@keyframes tab-entry-in{from{opacity:0;transform:translateX(-10px) scale(.98);max-height:0}to{opacity:1;transform:translateX(0) scale(1);max-height:58px}}
+.tab-entry.active{background:linear-gradient(100deg,rgba(220,224,230,.17),rgba(255,255,255,.055));border-color:rgba(255,255,255,.3);box-shadow:inset 3px 0 0 var(--red),0 0 18px rgba(220,224,230,.08)}
+.tab-entry.closing{opacity:0;transform:translateX(-22px) scale(.96);max-height:0;margin:0;border-width:0;overflow:hidden}
+.tab-select{display:flex;align-items:center;gap:10px;min-width:0;flex:1;padding:11px 5px 11px 11px;border:0;background:transparent;color:#cbd1dc;text-align:left;cursor:pointer;font:inherit}
+.tab-entry.active .tab-select{color:#fff}
+.tab-favicon{width:25px;height:25px;flex:0 0 25px;display:grid;place-items:center;border-radius:7px;background:rgba(255,255,255,.09);color:var(--gold);font-size:12px;font-weight:900;text-shadow:0 0 8px rgba(255,255,255,.5)}
+.tab-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:600}
+.tab-close{flex:0 0 28px;width:28px;height:28px;margin-right:5px;border:0;border-radius:7px;background:transparent;color:#7d8492;font-size:18px;line-height:1;cursor:pointer;opacity:.72;transition:background .18s,color .18s,opacity .18s,transform .18s}
+.tab-close:hover{background:rgba(220,224,230,.2);color:#ffffff;opacity:1;transform:scale(1.08)}
+.add-tab{display:flex;align-items:center;gap:10px;width:100%;margin-top:5px;padding:11px 12px;border:1px dashed rgba(255,255,255,.3);border-radius:10px;background:rgba(255,255,255,.035);color:var(--gold);font:600 13px system-ui,sans-serif;text-align:left;cursor:pointer;white-space:nowrap;transition:background .2s,border-color .2s,transform .2s}
+.add-tab:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.65);transform:translateY(-1px)}
+.sidebar-foot{margin-top:auto;padding:15px 7px 3px;color:#626b7a;font-size:10px;line-height:1.7;white-space:nowrap}
+.main-area{position:relative;display:flex;flex:1;flex-direction:column;min-width:0;height:100%;overflow:hidden}
+.top-header{position:relative;z-index:2;display:flex;align-items:center;gap:18px;min-height:82px;padding:14px 24px;background:rgba(5,8,16,.66);border-bottom:1px solid rgba(255,255,255,.13);backdrop-filter:blur(15px)}
+.mobile-menu{display:none}
+.title-stack{flex:0 0 auto;min-width:210px}
+.rebel-title{font-family:Inter,system-ui,sans-serif;color:var(--red);font-size:clamp(10px,1.2vw,15px);letter-spacing:1px;text-shadow:0 0 12px rgba(220,224,230,.45),2px 2px 0 #000;line-height:1.7}
+.rebel-title span{color:var(--gold);text-shadow:0 0 12px rgba(255,255,255,.45),2px 2px 0 #000}
+.header-subtitle{margin-top:3px;color:#7f8796;font-size:10px;letter-spacing:1.5px;text-transform:uppercase}
+.global-nav{display:flex;gap:8px;flex:1;max-width:760px;margin-left:auto}
+.global-nav input{min-width:0;flex:1;padding:12px 15px;border:1px solid rgba(255,255,255,.2);border-radius:9px;background:rgba(0,0,0,.48);color:#fff;font-size:14px;outline:none;transition:border-color .2s,box-shadow .2s}
+.global-nav input:focus{border-color:var(--gold);box-shadow:0 0 13px rgba(255,255,255,.2)}
+.go{padding:0 21px;background:linear-gradient(135deg,var(--red),#aeb4bd);color:var(--gold);border:1px solid var(--gold);border-radius:9px;font-weight:800;font-size:13px;letter-spacing:1px;cursor:pointer;transition:background .2s,color .2s,box-shadow .2s,transform .2s}
+.go:hover{background:var(--gold);color:#05070e;box-shadow:0 0 18px rgba(255,255,255,.45);transform:translateY(-1px)}
+#tabViewport{position:relative;flex:1;min-height:0;overflow:hidden}
+.tab-panel{position:absolute;inset:0;overflow:auto;visibility:hidden;opacity:0;transform:translateX(20px) scale(.99);pointer-events:none;transition:opacity .24s ease,transform .28s cubic-bezier(.2,.75,.25,1),visibility .28s}
+.tab-panel.active{visibility:visible;opacity:1;transform:translateX(0) scale(1);pointer-events:auto;z-index:1}
+.tab-panel.closing{opacity:0;transform:translateX(-18px) scale(.985);visibility:visible;pointer-events:none}
+.home-screen{display:flex;align-items:center;justify-content:center;min-height:100%;padding:28px}
+.card{width:100%;max-width:620px;padding:34px;background:rgba(10,14,24,.8);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.27);border-radius:17px;text-align:center;box-shadow:0 0 40px rgba(220,224,230,.14),0 0 20px rgba(255,255,255,.07),0 12px 32px rgba(0,0,0,.52);animation:card-enter .42s cubic-bezier(.2,.8,.2,1) both}
+@keyframes card-enter{from{opacity:0;transform:translateY(13px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+.card-mark{width:67px;height:67px;margin:0 auto 19px;filter:drop-shadow(0 0 12px rgba(255,255,255,.22))}
+.card h2{margin-bottom:10px;color:#fff;font-family:Inter,system-ui,sans-serif;font-size:clamp(12px,1.5vw,17px);line-height:1.8}
+.card h2 span{color:var(--gold)}
+.card-copy{margin:0 auto 24px;max-width:420px;color:#9ba3b2;font-size:13px;line-height:1.6}
+.home-form{display:flex;gap:9px;margin-bottom:18px}
+.home-form input{flex:1;min-width:0;padding:14px 16px;border:1px solid rgba(255,255,255,.22);border-radius:9px;background:rgba(0,0,0,.55);color:#fff;font-size:14px;outline:none;transition:border-color .2s,box-shadow .2s}
+.home-form input:focus{border-color:var(--gold);box-shadow:0 0 13px rgba(255,255,255,.2)}
+.pills{display:flex;flex-wrap:wrap;justify-content:center;gap:9px;margin-bottom:18px}
+.pill,.cloak{padding:9px 14px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.14);border-radius:20px;color:#e7eaf0;font-size:12px;cursor:pointer;transition:background .2s,border-color .2s,color .2s,transform .2s}
+.pill:hover{border-color:var(--gold);color:var(--gold);background:rgba(255,255,255,.1);transform:translateY(-2px)}
+.cloak{border-color:rgba(220,224,230,.6);color:var(--gold);background:rgba(220,224,230,.1);border-radius:8px;font-weight:650}
+.cloak:hover{background:rgba(220,224,230,.22)}
+.home-status{margin-top:15px;padding:10px;border-radius:8px;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.13);font-size:12px;color:var(--gold)}
+.tab-frame{display:block;width:100%;height:100%;border:0;background:#fff;opacity:0;animation:frame-enter .28s ease .04s forwards}
+@keyframes frame-enter{to{opacity:1}}
+.app-shell.sidebar-collapsed .sidebar{width:76px;flex-basis:76px;padding-left:10px;padding-right:10px}
+.app-shell.sidebar-collapsed .brand-name,.app-shell.sidebar-collapsed .sidebar-heading span,.app-shell.sidebar-collapsed .tab-label,.app-shell.sidebar-collapsed .tab-close,.app-shell.sidebar-collapsed .add-label,.app-shell.sidebar-collapsed .sidebar-foot{display:none}
+.app-shell.sidebar-collapsed .sidebar-brand{justify-content:center;padding-left:0;padding-right:0}
+.app-shell.sidebar-collapsed .sidebar-heading{justify-content:center;padding-left:0;padding-right:0}
+.app-shell.sidebar-collapsed .tab-select{justify-content:center;padding:9px 3px}
+.app-shell.sidebar-collapsed .tab-entry{justify-content:center}
+.app-shell.sidebar-collapsed .add-tab{justify-content:center;padding:10px 0;font-size:19px}
+/* Keep the home screen clean. The tab rail slides in only after a tab navigates. */
+.app-shell.home-mode .sidebar{width:0!important;flex-basis:0!important;padding-left:0!important;padding-right:0!important;opacity:0;transform:translateX(-14px);border-right:0;box-shadow:none;pointer-events:none;visibility:hidden;transition:width .28s ease,flex-basis .28s ease,padding .28s ease,opacity .18s ease,transform .28s ease,visibility 0s linear .28s}
+.app-shell:not(.home-mode) .sidebar{visibility:visible;transition:width .28s ease,flex-basis .28s ease,padding .28s ease,opacity .2s ease,transform .28s ease,visibility 0s}
+@media(max-width:760px){.sidebar{position:absolute;z-index:8;left:0;top:0;bottom:0;width:250px;flex-basis:250px;transform:translateX(-101%);transition:transform .26s ease;box-shadow:20px 0 55px rgba(0,0,0,.55)}.app-shell.mobile-sidebar-open .sidebar{transform:translateX(0)}.main-area{width:100%}.top-header{min-height:74px;padding:11px 13px;gap:10px}.mobile-menu{display:block;flex:0 0 32px}.title-stack{min-width:0;flex:1}.rebel-title{font-size:10px}.header-subtitle{font-size:8px}.global-nav{position:absolute;left:13px;right:13px;top:79px;z-index:3;max-width:none}.top-header{padding-bottom:67px}.home-screen{padding:80px 15px 20px}.card{padding:25px 18px}.tab-frame{height:100%}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<div class="moon-orb" aria-hidden="true"></div>
+<canvas id="space"></canvas>
+<div class="app-shell home-mode" id="appShell">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <svg class="brand-mark" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="60" cy="60" r="54" fill="rgba(8,9,12,.88)" stroke="#FFFFFF" stroke-width="3"/>
+        <circle cx="60" cy="60" r="46" fill="none" stroke="#d7dbe0" stroke-width="2" stroke-dasharray="18 8"/>
+        <polygon points="60,16 24,78 42,72 60,44 78,72 96,78" fill="#d7dbe0"/>
+        <polygon points="60,12 52,66 60,58 68,66" fill="#FFFFFF"/>
+        <circle cx="60" cy="76" r="6" fill="#FFFFFF"/>
+      </svg>
+      <div class="brand-name">PROJECT:<br><span>REBELLION</span></div>
+    </div>
+    <div class="sidebar-heading"><span>OPEN TABS</span><button class="icon-button" id="collapseSidebar" type="button" title="Collapse sidebar" aria-label="Collapse sidebar">‹</button></div>
+    <div id="tabs" role="tablist" aria-label="Open tabs"></div>
+    <button class="add-tab" id="addTab" type="button"><span>＋</span><span class="add-label">New tab</span></button>
+    <div class="sidebar-foot">CTRL / ⌘ + T &nbsp; New tab<br>CTRL / ⌘ + W &nbsp; Close tab</div>
+  </aside>
+
+  <main class="main-area">
+    <header class="top-header">
+      <button class="icon-button mobile-menu" id="mobileMenu" type="button" aria-label="Open tab sidebar">☰</button>
+      <div class="title-stack">
+        <h1 class="rebel-title">PROJECT: <span>REBELLION</span></h1>
+        <p class="header-subtitle">A quieter place to browse with Scramjet + Bare</p>
+      </div>
+      <form class="global-nav" id="globalNav">
+        <input id="addressInput" type="text" placeholder="Search or enter a URL…" autocomplete="off" aria-label="Search or enter a URL">
+        <button class="go" type="submit">GO</button>
+      </form>
+    </header>
+    <section id="tabViewport" aria-live="off"></section>
+  </main>
+</div>
+<div id="space-effects" aria-hidden="true"></div>
+
+<template id="homeTemplate">
+  <div class="home-screen">
+    <section class="card">
+      <svg class="card-mark" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="60" cy="60" r="54" fill="rgba(8,9,12,.88)" stroke="#FFFFFF" stroke-width="3"/>
+        <circle cx="60" cy="60" r="46" fill="none" stroke="#d7dbe0" stroke-width="2" stroke-dasharray="18 8"/>
+        <polygon points="60,16 24,78 42,72 60,44 78,72 96,78" fill="#d7dbe0"/>
+        <polygon points="60,12 52,66 60,58 68,66" fill="#FFFFFF"/>
+        <circle cx="60" cy="76" r="6" fill="#FFFFFF"/>
+      </svg>
+      <h2>PROJECT: <span>REBELLION</span></h2>
+      <p class="card-copy">A new tab, a clean slate. Search the web or enter a website address to begin.</p>
+      <form class="home-form">
+        <input type="text" placeholder="Search DuckDuckGo or enter a URL…" required autocomplete="off" aria-label="Search or enter a URL">
+        <button class="go" type="submit">GO</button>
+      </form>
+      <div class="pills">
+        <button class="pill" data-url="https://duckduckgo.com" type="button">DuckDuckGo</button>
+        <button class="pill" data-url="https://wikipedia.org" type="button">Wikipedia</button>
+        <button class="pill" data-url="https://soundcloud.com" type="button">SoundCloud</button>
+      </div>
+      <button class="cloak" type="button">Cloak Tab (Google Docs)</button>
+      <div class="home-status">System Ready · Scramjet + Bare connects when you search</div>
+    </section>
+  </div>
+</template>
+
+<script>
+(function () {
+  const appShell = document.getElementById("appShell");
+  const tabsElement = document.getElementById("tabs");
+  const viewport = document.getElementById("tabViewport");
+  const addressInput = document.getElementById("addressInput");
+  const homeTemplate = document.getElementById("homeTemplate");
+  const tabs = [];
+  let nextTabId = 1;
+  let activeTabId = null;
+  const sidebar = document.getElementById("sidebar");
+
+  // The sidebar is hidden on the landing page and appears as soon as at least
+  // one tab has navigated to a search result or website.
+  function syncShellMode() {
+    const hasNavigatedTab = tabs.some((tab) => !tab.home && !tab.closing);
+    const homeMode = !hasNavigatedTab;
+    appShell.classList.toggle("home-mode", homeMode);
+    sidebar.setAttribute("aria-hidden", homeMode ? "true" : "false");
+    sidebar.inert = homeMode;
+  }
+
+  let scramjetControllerPromise = null;
+  let serviceWorkerKeepalive = null;
+  const scriptLoadPromises = new Map();
+
+  function loadScript(src) {
+    if (scriptLoadPromises.has(src)) return scriptLoadPromises.get(src);
+    const promise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = src;
+      script.onload = resolve;
+      script.onerror = () => reject(new Error("Failed to load " + src));
+      document.head.appendChild(script);
+    });
+    scriptLoadPromises.set(src, promise);
+    promise.catch(() => scriptLoadPromises.delete(src));
+    return promise;
+  }
+
+  async function getScramjetController() {
+    if (!scramjetControllerPromise) {
+      scramjetControllerPromise = (async () => {
+        if (!("serviceWorker" in navigator)) {
+          throw new Error("This browser does not support service workers. Use a current browser over HTTPS.");
+        }
+
+        const registration = await navigator.serviceWorker.register("/sw.js", {
+          scope: "/",
+          updateViaCache: "none"
+        });
+        await navigator.serviceWorker.ready;
+
+        if (!navigator.serviceWorker.controller) {
+          await new Promise((resolve, reject) => {
+            const timeout = window.setTimeout(() => {
+              navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
+              reject(new Error("The service worker did not take control. Reload this page and try again."));
+            }, 15000);
+            function onControllerChange() {
+              window.clearTimeout(timeout);
+              resolve();
+            }
+            navigator.serviceWorker.addEventListener("controllerchange", onControllerChange, { once: true });
+            if (navigator.serviceWorker.controller) onControllerChange();
+          });
+        }
+
+        const serviceworker = navigator.serviceWorker.controller || registration.active;
+        if (!serviceworker) throw new Error("The Scramjet service worker did not become active.");
+
+        // Scramjet 2.x bundles must load in this order: core, controller, utils.
+        await loadScript("/scram/scramjet.js");
+        await loadScript("/controller/controller.api.js");
+        await loadScript("/utils/scramjet-utils.js");
+
+        const Controller = window.$scramjetController && window.$scramjetController.Controller;
+        if (!Controller) throw new Error("Scramjet controller assets loaded, but Controller is unavailable.");
+
+        // Bare is an HTTP transport. The same Node service exposes /bare/;
+        // there is no Wisp URL or separately managed Wisp server.
+        const { default: BareClient } = await import("/baremod/index.mjs");
+        const transport = new BareClient(new URL("/bare/", window.location.href));
+        const controller = new Controller({
+          serviceworker,
+          transport,
+          config: {
+            prefix: "/~/sj/",
+            scramjetPath: "/scram/scramjet.js",
+            wasmPath: "/scram/scramjet.wasm",
+            injectPath: "/controller/controller.inject.js"
+          }
+        });
+
+        await controller.wait();
+
+        // Keep the Scramjet service worker alive while this shell is open.
+        if (serviceWorkerKeepalive === null) {
+          serviceWorkerKeepalive = window.setInterval(() => {
+            navigator.serviceWorker.controller?.postMessage("keepalive");
+          }, 15000);
+        }
+        return controller;
+      })().catch((error) => {
+        scramjetControllerPromise = null;
+        throw error;
+      });
+    }
+    return scramjetControllerPromise;
+  }
+
+  function normalizeUrl(raw) {
+    let value = String(raw || "").trim();
+    if (!value) return null;
+    const looksLikeUrl = /^https?:\/\//i.test(value) || (!/\s/.test(value) && value.includes("."));
+    if (!looksLikeUrl) value = "https://html.duckduckgo.com/html/?q=" + encodeURIComponent(value) + "&kl=us-en";
+    else if (!/^https?:\/\//i.test(value)) value = "https://" + value;
+    try {
+      const parsed = new URL(value);
+      if (!/^https?:$/.test(parsed.protocol)) return null;
+      return parsed.href;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function findTab(id) {
+    return tabs.find((tab) => tab.id === id);
+  }
+
+  function updateTabTitle(tab, title) {
+    if (!tab || tab.closing) return;
+    const cleanTitle = String(title || "New tab").replace(/\s+/g, " ").trim().slice(0, 70) || "New tab";
+    tab.title = cleanTitle;
+    tab.label.textContent = cleanTitle;
+    tab.select.title = cleanTitle;
+    tab.favicon.textContent = tab.home ? "✦" : (cleanTitle.charAt(0).toUpperCase() || "•");
+    if (tab.id === activeTabId) document.title = cleanTitle + " — Project: Rebellion";
+  }
+
+  function activateTab(id) {
+    const next = findTab(id);
+    if (!next || next.closing) return;
+    activeTabId = id;
+
+    tabs.forEach((tab) => {
+      const active = tab.id === id;
+      tab.entry.classList.toggle("active", active);
+      tab.panel.classList.toggle("active", active);
+      tab.select.setAttribute("aria-selected", active ? "true" : "false");
+      tab.panel.setAttribute("aria-hidden", active ? "false" : "true");
+    });
+
+    addressInput.value = next.url || "";
+    document.title = (next.title || "New tab") + " — Project: Rebellion";
+    syncShellMode();
+    if (window.matchMedia("(max-width: 760px)").matches) appShell.classList.remove("mobile-sidebar-open");
+  }
+
+  function setStatus(tab, message) {
+    if (tab && tab.status) tab.status.textContent = message;
+  }
+
+  async function navigateTab(tab, rawUrl) {
+    if (!tab || tab.closing) return;
+    const url = normalizeUrl(rawUrl);
+    if (!url) {
+      setStatus(tab, "Please enter a valid HTTP or HTTPS address.");
+      return;
+    }
+
+    tab.url = url;
+    tab.navigationToken = (tab.navigationToken || 0) + 1;
+    const navigationToken = tab.navigationToken;
+    tab.home = false;
+    syncShellMode();
+    updateTabTitle(tab, new URL(url).hostname.replace(/^www\./, ""));
+    addressInput.value = url;
+    setStatus(tab, "Connecting to Scramjet…");
+
+    if (!tab.frame) {
+      tab.panel.innerHTML = "";
+      const frame = document.createElement("iframe");
+      frame.className = "tab-frame";
+      frame.title = tab.title;
+      frame.setAttribute("sandbox", "allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts allow-downloads");
+      frame.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
+      frame.setAttribute("allow", "clipboard-read; clipboard-write; fullscreen; autoplay; encrypted-media; picture-in-picture");
+      frame.addEventListener("load", function () {
+        if (!tab.closing && tab.url) {
+          setStatus(tab, "Page loaded · " + new URL(tab.url).hostname);
+        }
+      });
+      tab.frame = frame;
+      tab.panel.appendChild(frame);
+    }
+
+    tab.frame.title = tab.title;
+    if (tab.id !== activeTabId) activateTab(tab.id);
+
+    try {
+      const controller = await getScramjetController();
+      if (tab.closing || tab.navigationToken !== navigationToken) return;
+      if (!tab.scramFrame) {
+        const utils = window.$scramjetUtils || {};
+        const plugins = [];
+        if (typeof utils.HttpCachePlugin === "function") {
+          plugins.push(new utils.HttpCachePlugin());
+        }
+        if (typeof utils.UrlWatcherPlugin === "function") {
+          plugins.push(new utils.UrlWatcherPlugin((nextUrl) => {
+            if (tab.closing) return;
+            try {
+              tab.url = new URL(String(nextUrl)).href;
+              if (tab.id === activeTabId) addressInput.value = tab.url;
+              updateTabTitle(tab, new URL(tab.url).hostname.replace(/^www\./, ""));
+            } catch (error) {
+              console.debug("Ignored an unrecognized Scramjet URL update:", error);
+            }
+          }));
+        }
+        tab.scramFrame = controller.createFrame(tab.frame, { plugins });
+      }
+      tab.scramFrame.go(url);
+      setStatus(tab, "Loading through Scramjet + Bare · " + new URL(url).hostname);
+    } catch (error) {
+      console.error("Scramjet navigation failed:", error);
+      setStatus(tab, "Scramjet/Bare could not start. Check /_health, /sw.js, and the server logs.");
+    }
+  }
+
+  function wireHome(tab) {
+    const home = homeTemplate.content.firstElementChild.cloneNode(true);
+    tab.panel.appendChild(home);
+    tab.status = home.querySelector(".home-status");
+    const form = home.querySelector(".home-form");
+    const input = form.querySelector("input");
+
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      navigateTab(tab, input.value);
+    });
+
+    home.querySelectorAll(".pill").forEach((button) => {
+      button.addEventListener("click", function () {
+        navigateTab(tab, button.dataset.url);
+      });
+    });
+
+    home.querySelector(".cloak").addEventListener("click", function () {
+      updateTabTitle(tab, "Untitled document");
+      setStatus(tab, "Tab title changed to Untitled document.");
+      const favicon = document.getElementById("fav");
+      if (favicon) favicon.href = "https://www.gstatic.com/images/branding/product/1x/docs_2020q4_48dp.png";
+    });
+  }
+
+  function createTab(initialUrl) {
+    const id = nextTabId++;
+    const entry = document.createElement("div");
+    entry.className = "tab-entry";
+
+    const select = document.createElement("button");
+    select.className = "tab-select";
+    select.type = "button";
+    select.setAttribute("role", "tab");
+    select.setAttribute("aria-selected", "false");
+
+    const favicon = document.createElement("span");
+    favicon.className = "tab-favicon";
+    favicon.textContent = "✦";
+    const label = document.createElement("span");
+    label.className = "tab-label";
+    label.textContent = "New tab";
+    select.append(favicon, label);
+
+    const close = document.createElement("button");
+    close.className = "tab-close";
+    close.type = "button";
+    close.textContent = "×";
+    close.title = "Close tab";
+    close.setAttribute("aria-label", "Close tab");
+    entry.append(select, close);
+
+    const panel = document.createElement("section");
+    panel.className = "tab-panel";
+    panel.setAttribute("role", "tabpanel");
+    panel.setAttribute("aria-hidden", "true");
+
+    const tab = {
+      id: id,
+      title: "New tab",
+      url: "",
+      home: true,
+      closing: false,
+      entry: entry,
+      select: select,
+      favicon: favicon,
+      label: label,
+      close: close,
+      panel: panel,
+      frame: null,
+      scramFrame: null,
+      navigationToken: 0,
+      status: null
+    };
+
+    select.addEventListener("click", () => activateTab(id));
+    close.addEventListener("click", (event) => {
+      event.stopPropagation();
+      closeTab(id);
+    });
+
+    tabs.push(tab);
+    tabsElement.appendChild(entry);
+    viewport.appendChild(panel);
+    wireHome(tab);
+    activateTab(id);
+
+    if (initialUrl) navigateTab(tab, initialUrl);
+    else updateTabTitle(tab, "New tab");
+    return tab;
+  }
+
+  function closeTab(id) {
+    const tab = findTab(id);
+    if (!tab || tab.closing) return;
+    tab.closing = true;
+    tab.entry.classList.add("closing");
+    tab.panel.classList.add("closing");
+    syncShellMode();
+
+    if (id === activeTabId) {
+      const remaining = tabs.filter((item) => item.id !== id && !item.closing);
+      if (remaining.length) {
+        const oldIndex = tabs.findIndex((item) => item.id === id);
+        const next = remaining[Math.min(oldIndex, remaining.length - 1)] || remaining[0];
+        activateTab(next.id);
+      } else {
+        createTab();
+      }
+    }
+
+    window.setTimeout(() => {
+      // Scramjet's Frame API currently has no destroy() method. Remove closed
+      // frames from the controller's registry before removing their iframe.
+      const frame = tab.scramFrame;
+      const registeredFrames = frame && frame.controller && frame.controller.frames;
+      if (Array.isArray(registeredFrames)) {
+        const frameIndex = registeredFrames.indexOf(frame);
+        if (frameIndex !== -1) registeredFrames.splice(frameIndex, 1);
+      }
+      tab.scramFrame = null;
+      tab.frame = null;
+      tab.entry.remove();
+      tab.panel.remove();
+      const index = tabs.findIndex((item) => item.id === id);
+      if (index !== -1) tabs.splice(index, 1);
+      syncShellMode();
+    }, 250);
+  }
+
+  document.getElementById("addTab").addEventListener("click", () => createTab());
+  document.getElementById("collapseSidebar").addEventListener("click", () => {
+    appShell.classList.toggle("sidebar-collapsed");
+  });
+  document.getElementById("mobileMenu").addEventListener("click", () => {
+    appShell.classList.toggle("mobile-sidebar-open");
+  });
+
+  document.getElementById("globalNav").addEventListener("submit", function (event) {
+    event.preventDefault();
+    const active = findTab(activeTabId);
+    if (active) navigateTab(active, addressInput.value);
+  });
+
+  // Scramjet controls navigation inside each managed frame. The app shell
+  // keeps its own tab state and address bar without rewriting upstream URLs.
+
+  // Browser-style keyboard shortcuts.
+  document.addEventListener("keydown", function (event) {
+    const modifier = event.ctrlKey || event.metaKey;
+    if (!modifier || event.altKey) return;
+    const key = event.key.toLowerCase();
+    if (key === "t") {
+      event.preventDefault();
+      createTab();
+    } else if (key === "w") {
+      event.preventDefault();
+      closeTab(activeTabId);
+    } else if (key === "l") {
+      event.preventDefault();
+      addressInput.focus();
+      addressInput.select();
+    }
+  });
+
+  // Animated starfield background.
+  const canvas = document.getElementById("space");
+  const context = canvas.getContext("2d");
+  const palette = ["#ffffff", "#ffffff", "#d8dce2", "#aeb4bd"];
+  let stars = [];
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    stars = Array.from({ length: 160 }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      radius: Math.random() * 1.8 + 0.5,
+      speed: Math.random() * 0.65 + 0.15,
+      color: palette[Math.floor(Math.random() * palette.length)],
+      alpha: Math.random() * 0.6 + 0.4,
+      twinkle: (Math.random() - 0.5) * 0.02
+    }));
+  }
+
+  window.addEventListener("resize", resizeCanvas);
+  resizeCanvas();
+
+  (function animateStars() {
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    for (const star of stars) {
+      star.alpha += star.twinkle;
+      if (star.alpha <= 0.25 || star.alpha >= 1) star.twinkle *= -1;
+      context.globalAlpha = star.alpha;
+      context.fillStyle = star.color;
+      context.shadowBlur = star.color === "#ffffff" ? 7 : 3;
+      context.shadowColor = star.color;
+      context.beginPath();
+      context.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+      context.fill();
+      star.y += star.speed;
+      if (star.y > canvas.height) {
+        star.y = 0;
+        star.x = Math.random() * canvas.width;
+      }
+    }
+    context.globalAlpha = 1;
+    context.shadowBlur = 0;
+    requestAnimationFrame(animateStars);
+  })();
+
+  // Random meteor streaks. They pause while the page is hidden and respect
+  // the user's reduced-motion preference. No rocket or mission elements remain.
+  const effectsLayer = document.getElementById("space-effects");
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let meteorTimer = null;
+
+  function scheduleMeteor() {
+    if (meteorTimer !== null) {
+      window.clearTimeout(meteorTimer);
+      meteorTimer = null;
+    }
+    if (!document.hidden && !reducedMotion) {
+      meteorTimer = window.setTimeout(spawnMeteor, 9000 + Math.random() * 11000);
+    }
+  }
+
+  function spawnMeteor() {
+    meteorTimer = null;
+    if (document.hidden || reducedMotion) return;
+
+    const meteor = document.createElement("span");
+    meteor.className = "meteor";
+    meteor.style.left = (55 + Math.random() * 48) + "vw";
+    meteor.style.top = (Math.random() * 34) + "vh";
+    meteor.style.animationDuration = (1.25 + Math.random() * 0.8) + "s";
+    effectsLayer.appendChild(meteor);
+    window.setTimeout(() => meteor.remove(), 2400);
+    scheduleMeteor();
+  }
+
+  document.addEventListener("visibilitychange", scheduleMeteor);
+  scheduleMeteor();
+
+  // Start with one home tab.
+  createTab();
+})();
+</script>
+</body>
+</html>
